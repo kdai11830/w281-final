@@ -9,8 +9,14 @@ import random
 from tqdm import tqdm
 from skimage.feature import hog
 
+class Imag:
+    def __init__(self) -> None:
+        pass
 
 def get_random_pics_by_class(data_dir):
+    """
+    Get a random example image per class and display given a path.
+    """
     dict_imgs = {}
     for cl in os.listdir(data_dir):
         f = random.choice(os.listdir(os.path.join(data_dir, cl)))
@@ -23,11 +29,15 @@ def get_random_pics_by_class(data_dir):
         axes[i // 3, i % 3].imshow(dict_imgs[cl])
         axes[i // 3, i % 3].axis("off")
         axes[i // 3, i % 3].set_title(cl)
-
+    plt.title("One Random Example Per Class")
     plt.show()
 
 
 def load_dataset(data_dir, limit_to=25):
+    """
+    Load image data set given a path.
+    limit_to: limits the number of examples per class to this value.
+    """
     data = {}
     for cl in os.listdir(data_dir):
         print(cl)
@@ -52,7 +62,7 @@ def plot_distribution_of_images_per_class(data):
 
 
 def get_rgb_features(data):
-    rgb_tmp = {
+    rgb = {
         cl: pd.melt(
             pd.DataFrame(
                 np.array([x.mean(axis=(0, 1)) for x in data[cl]]),
@@ -63,7 +73,7 @@ def get_rgb_features(data):
         )
         for cl in data.keys()
     }
-    return rgb_tmp
+    return rgb
 
 
 def get_hog_features(data):
@@ -80,27 +90,36 @@ def get_hog_features(data):
     return hog_dict
 
 
-def plot_hist_per_class(data, rgb_tmp):
-    rgb_tmp_3d = pd.DataFrame()
-    for cl in data.keys():
-        tmp = pd.DataFrame(
-            np.array([x.mean(axis=(0, 1)) for x in data[cl]]), columns=["R", "G", "B"]
-        )
-        tmp["class"] = cl
-        rgb_tmp_3d = pd.concat([rgb_tmp_3d, tmp], axis=0)
-
-    num_classes = len(rgb_tmp.keys())
+def plot_hist_per_class(data, rgb_features):
+    num_classes = len(rgb_features.keys())
     fig, axes = plt.subplots(
         nrows=num_classes // 3, ncols=3, figsize=(18, num_classes * 2)
     )
-    for i, cl in enumerate(rgb_tmp.keys()):
+    for i, cl in enumerate(rgb_features.keys()):
         sns.histplot(
             x="Average Value",
             hue="RGB",
             multiple="layer",
-            data=rgb_tmp[cl],
+            data=rgb_features[cl],
             ax=axes[i // 3, i % 3],
         )
         axes[i // 3, i % 3].set_title(cl)
     fig.savefig("plots/class_rgb_hist.png")
     plt.show()
+
+
+def visualize_rgb_features(data):
+    rgb_features_3d = pd.DataFrame()
+    for cl in data.keys():
+        tmp = pd.DataFrame(
+            np.array([x.mean(axis=(0, 1)) for x in data[cl]]), columns=["R", "G", "B"]
+        )
+        tmp["class"] = cl
+        rgb_features_3d = pd.concat([rgb_features_3d, tmp], axis=0)
+
+    fig = px.scatter_3d(
+        rgb_features_3d, x="R", y="G", z="B", color="class", width=800, height=800
+    )
+    fig.update_traces(marker_size=6)
+    fig.write_html("plots/class_scatter.html")
+    fig.show()
